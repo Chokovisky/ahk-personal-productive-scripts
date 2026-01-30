@@ -10,3 +10,7 @@ AHK/Tools/*.exe
 /Tests
 
 *.sln
+AHK/Tools/HKCheatsheetOverlay/ChokoLPT.Shared.pdb
+AHK/Tools/HKCheatsheetOverlay/HKCheatsheetOverlay.pdb
+AHK/Tools/RadialMenu/ChokoLPT.Shared.pdb
+AHK/Tools/RadialMenu/RadialMenu.pdb
