@@ -4,9 +4,9 @@
 ; ==============================================================================
 
 ; #region Habilitações Básicas
-#Requires AutoHotkey v2.0 
+#Requires AutoHotkey v2.0
 #SingleInstance Force
-#UseHook true 
+#UseHook true
 Persistent
 SetWorkingDir A_ScriptDir
 ; #endregion
@@ -60,6 +60,11 @@ Core_Initialize()
  
 ; Inicia TaskbarManager
 TaskbarManager.Start()
+
+; Inicia watcher de clipboard para deeplinks Obsidian copiados a partir do Notion
+; - Quando a janela ativa for Notion.exe e o clipboard receber obsidian://...
+;   o NotionUtils abre o Obsidian automaticamente.
+Notion_StartObsidianClipboardWatcher()
  
 ; Pré-aquece HKCheatsheetOverlay em background após um pequeno delay
 SetTimer(() => HKCheatsheetOverlayUtils.Warmup(), -5000)
