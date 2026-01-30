@@ -5,7 +5,8 @@
 
 class TaskbarManager {
     static CHECK_INTERVAL := 100 ; Intervalo de checagem em ms
-    static MOUSE_THRESHOLD := 2 ; Pixels de tolerancia do bottom edge para ativar a taskbar
+    ; Pixels de tolerância do bottom edge para ativar a taskbar
+    static MOUSE_THRESHOLD := 2
     static IsActive := false ; Estado do gerenciador
     static BarIsVisible := true ; Estado de visibilidade da taskbar
     static hMainBar := 0 ; Handle da taskbar principal
@@ -87,7 +88,28 @@ class TaskbarManager {
 
         CoordMode "Mouse", "Screen"
         MouseGetPos(&mX, &mY)
-        MonitorGet(1, &L, &T, &R, &B)
+        ; Usa o monitor ONDE O MOUSE ESTÁ (multi-monitor correto)
+        ; AHK v2 não expõe MonitorFromPoint diretamente → usar WinAPI
+        ; AHK v2: MonitorFromPoint via WinAPI (assinatura correta)
+        ; AHK v2: DllCall usa DLL e função separados (NÃO usar \)
+        ; AHK v2: forma CORRETA de chamar WinAPI (função qualificada no primeiro argumento)
+        ; AHK v2: assinatura correta (DLL\Func no primeiro argumento)
+        ; WinAPI returns HMONITOR (handle). AHK MonitorGet expects INDEX.
+        ; Map mouse point -> monitor INDEX explicitly (robust, multi-monitor safe)
+        monIndex := 0
+        count := MonitorGetCount()
+        Loop count {
+            MonitorGet(A_Index, &L, &T, &R, &B)
+            if (mX >= L && mX < R && mY >= T && mY < B) {
+                monIndex := A_Index
+                break
+            }
+        }
+        if (!monIndex) {
+            ; fallback to nearest via WinAPI handle -> still pick primary bounds
+            monIndex := 1
+            MonitorGet(monIndex, &L, &T, &R, &B)
+        }
         
         mouseAtBottom := (mY >= B - this.MOUSE_THRESHOLD)
         
@@ -106,7 +128,13 @@ class TaskbarManager {
                   || GetKeyState("LWin", "P") 
                   || GetKeyState("RWin", "P")
 
-        shouldShow := mouseAtBottom || mouseOver || startOpen
+        ; Não mostrar taskbar se houver janela em fullscreen (não apenas maximizada)
+        isFullscreen := this.IsFullscreenActive(monIndex)
+        shouldShow := (mouseAtBottom || mouseOver || startOpen) && !isFullscreen
+
+        ; ================= DEBUG =================
+        ; DEBUG DESABILITADO (estava falhando por path inexistente)
+        ; =========================================
 
         if (shouldShow && !this.BarIsVisible) {
             this.ShowVisual()
@@ -118,6 +146,31 @@ class TaskbarManager {
                 this.BarIsVisible := false
             }
         }
+    }
+
+    ; ============================================================
+    ; 2.1 DETECÇÃO DE FULLSCREEN REAL
+    ; ============================================================
+    static IsFullscreenActive(mon) {
+        try {
+            hwnd := WinActive("A")
+            if (!hwnd)
+                return false
+
+            ; Ignora desktop e a própria taskbar
+            class := WinGetClass(hwnd)
+            if (class = "Progman" || class = "WorkerW" || class = "Shell_TrayWnd")
+                return false
+
+            WinGetPos(&x, &y, &w, &h, hwnd)
+            MonitorGet(mon, &L, &T, &R, &B)
+
+            ; Fullscreen real: janela ocupa exatamente o monitor inteiro
+            ; Fullscreen REAL apenas se ocupar exatamente o monitor atual
+            if (x <= L && y <= T && w >= (R - L) && h >= (B - T))
+                return true
+        }
+        return false
     }
 
     ; ============================================================

@@ -21,6 +21,12 @@ Core_Initialize() {
 
 ; CRÍTICO: Esta função é chamada quando CapsLock é pressionado sozinho
 Core_HandleCapsPress() {
+    Global CurrentProfile
+    ; CRÍTICO: CapsLock como Esc SOMENTE no perfil Normal
+    ; No perfil Gamer, não interceptar CapsLock em hipótese nenhuma
+    if (CurrentProfile != "Normal") {
+        return
+    }
     Global LOGS_PATH
     try {
         FileAppend(
@@ -128,6 +134,26 @@ Core_CycleProfile() {
             FormatTime(, "yyyy-MM-dd HH:mm:ss") . " | Erro ao recarregar hotkeys: " . err.Message . "`n",
             LOGS_PATH . "\profile_cycle.log"
         )
+    }
+
+    ; --- CORREÇÃO CRÍTICA CAPSLOCK ---
+    ; CapsLock é uma tecla especial no AHK: se existir QUALQUER hotkey CapsLock registrada,
+    ; o comportamento nativo fica bloqueado mesmo quando HotIf retorna false.
+    ; Portanto, no perfil Gamer precisamos DESLIGAR explicitamente todas as hotkeys de Caps.
+    if (CurrentProfile = "Gamer") {
+        ; Libera CapsLock COMPLETAMENTE no Gamer (comportamento nativo do Windows)
+        try Hotkey("CapsLock", "Off")
+        try Hotkey("+CapsLock", "Off")
+        try Hotkey("CapsLock & Alt", "Off")
+
+        ; Reverte qualquer modo especial aplicado no perfil Normal
+        SetCapsLockState("Off")        ; garante estado conhecido
+        SetStoreCapsLockMode("On")     ; restaura toggle físico normal
+    }
+    else if (CurrentProfile = "Normal") {
+        ; Perfil Normal usa HyperKey (Caps como modificador)
+        SetCapsLockState("Off")
+        SetStoreCapsLockMode("Off")
     }
     
     ; Feedback visual ao usuário com status de salvamento

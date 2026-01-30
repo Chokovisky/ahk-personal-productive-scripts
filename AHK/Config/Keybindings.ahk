@@ -75,6 +75,14 @@ class HotkeyLoader {
         action  := item["action"]
         context := item.Has("context") ? item["context"] : ""
 
+        ; CORREÇÃO DEFINITIVA: CapsLock NÃO EXISTE no perfil Gamer
+        ; Mesmo registrar hotkey CapsLock (com HotIf) deixa a tecla em modo hyperkey.
+        ; Portanto, simplesmente NÃO registramos caps_* para Gamer.
+        if (InStr(id, "caps_") && item.Has("profiles")) {
+            ; força apenas Normal
+            item["profiles"] := ["Normal"]
+        }
+
         ; Se não tiver lista de perfis, nada a fazer
         if !item.Has("profiles") {
             ; CASO ESPECIAL: cycle_profile deve existir em TODOS os perfis disponíveis

@@ -55,6 +55,10 @@ public partial class MainWindow : Window
     private bool _isF1Held = false;
     private bool _isF2Held = false;
     
+    // Debounce para evitar double-toggle (key down/up via AHK)
+    private DateTime _lastToggleUtc = DateTime.MinValue;
+    private const int ToggleDebounceMs = 150;
+    
     private string? _argActiveExe;
     private int? _argX, _argY;
     private bool _profileFromArgs = false;
@@ -180,6 +184,16 @@ public partial class MainWindow : Window
     /// </summary>
     public void Toggle()
     {
+        // Debounce apenas para eventos DUPLICADOS imediatos (key down + key up do AHK)
+        var nowUtc = DateTime.UtcNow;
+        var deltaMs = (nowUtc - _lastToggleUtc).TotalMilliseconds;
+        if (deltaMs < ToggleDebounceMs)
+        {
+            PerfLog("Toggle() ignored (duplicate trigger)");
+            return;
+        }
+        _lastToggleUtc = nowUtc;
+
         var swTotal = Stopwatch.StartNew();
         PerfLog("Toggle() START");
 
@@ -199,7 +213,8 @@ public partial class MainWindow : Window
         {
             Hide();
             swTotal.Stop();
-            PerfLog($"Toggle() - Hide only | Total={swTotal.ElapsedMilliseconds}ms");
+            PerfLog($"Toggle() - Hide | Total={swTotal.ElapsedMilliseconds}ms");
+            return;
         }
         else
         {
